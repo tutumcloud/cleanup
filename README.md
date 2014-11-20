@@ -4,6 +4,7 @@ tutum/image-cleanup
 ```
     docker run -d \
       -v /var/run:/var/run:rw \
+      -v /usr/lib/tutum/docker:/usr/bin/docker:r \
       -e CLEAN_PERIOD=600 \
       -e DELAY_TIME=600 \
       tutum/utils:image-cleanup

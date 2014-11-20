@@ -5,6 +5,8 @@ if [ ! -e "/var/run/docker.sock" ]; then
     exit 1
 fi
 
+docker version >/dev/null 2>&1 || ( echo "Cannot run docker binary at /usr/bin/docker" && exit 1)
+
 if [ "${CLEAN_PERIOD}" == "**None**" ]; then
     echo "=> CLEAN_PERIOD not defined, use the default value."
     CLEAN_PERIOD=600

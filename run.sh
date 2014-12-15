@@ -9,12 +9,12 @@ docker version >/dev/null 2>&1 || ( echo "Cannot run docker binary at /usr/bin/d
 
 if [ "${CLEAN_PERIOD}" == "**None**" ]; then
     echo "=> CLEAN_PERIOD not defined, use the default value."
-    CLEAN_PERIOD=3000
+    CLEAN_PERIOD=1800
 fi
 
 if [ "${DELAY_TIME}" == "**None**" ]; then
     echo "=> DELAY_TIME not defined, use the default value."
-    DELAY_TIME=3000
+    DELAY_TIME=1800
 fi
 
 if [ "${KEEP_IMAGES}" == "**None**" ]; then

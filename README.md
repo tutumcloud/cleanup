@@ -3,8 +3,10 @@ tutum/image-cleanup
 
 ```
     docker run -d \
+      --privileged \
       -v /var/run:/var/run:rw \
       -v /usr/lib/tutum/docker:/usr/bin/docker:r \
+      -v /var/lib/docker:/var/lib/docker:rw \
       -e CLEAN_PERIOD=1800 \
       -e DELAY_TIME=1800 \
       -e KEEP_IMAGES="ubuntu:trusty, ubuntu:latest" \

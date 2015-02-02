@@ -97,7 +97,33 @@ do
         echo "No images need to be cleaned"
     fi
 
-    rm -f ToBeCleanedImageIdList ContainerImageIdList ToBeCleaned ImageIdList KeepImageIdList
+    # Remove unused volumes
+    echo "=> Start to clean unused volums"
+    touch  KeepVolumeIdList
+    CONTAINER_ID_LIST=$(docker ps -aq --no-trunc)
+    for CONTAINER_ID in ${CONTAINER_ID_LIST}; do
+        docker inspect -f '{{range $conf := .Volumes}}{{$conf}}@{{end}}' ${CONTAINER_ID} | tr '@' '\n'| grep -o '[0-9a-fA-F]\{64\}$' >> KeepVolumeIdList
+    done
+    sort KeepVolumeIdList -o KeepVolumeIdList
+
+    ls /var/lib/docker/vfs/dir | cat | sort -o VolumeIdList
+    comm -23 VolumeIdList KeepVolumeIdList > ToBeCleanedVolumeIdList
+    while read ID
+    do
+        echo "=> Deleting unused volume: /var/lib/docker/vfs/dir/${ID}"
+        rm -rf /var/lib/docker/vfs/dir/${ID}
+    done < ToBeCleanedVolumeIdList
+
+    ls /var/lib/docker/volumes | cat | sort -o VolumeIdList
+    comm -23 VolumeIdList KeepVolumeIdList > ToBeCleanedVolumeIdList
+    while read ID
+    do
+        echo "=> Deleting unused volume: /var/lib/docker/volumes/${ID}"
+        rm -rf /var/lib/docker/volumes/${ID}
+    done < ToBeCleanedVolumeIdList
+    echo "=> Done!"
+
+    rm -f ToBeCleanedImageIdList ContainerImageIdList ToBeCleaned ImageIdList KeepImageIdList KeepVolumeIdList VolumeIdList ToBeCleanedVolumeIdList
     echo "=> Next clean will be started in ${CLEAN_PERIOD} seconds"
     sleep ${CLEAN_PERIOD}
 done

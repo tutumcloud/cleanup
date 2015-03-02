@@ -24,6 +24,11 @@ if [ "${DELAY_TIME}" == "**None**" ]; then
     DELAY_TIME=1800
 fi
 
+if [ "${UNUSED_VOLUME_TIME}" == "**None**" ]; then
+    echo "=> UNUSED_VOLUME_TIME not defined, use the default value."
+    UNUSED_VOLUME_TIME=86400
+fi
+
 if [ "${KEEP_IMAGES}" == "**None**" ]; then
     unset KEEP_IMAGES
 fi
@@ -110,7 +115,8 @@ do
     comm -23 VolumeIdList KeepVolumeIdList > ToBeCleanedVolumeIdList
     while read ID
     do
-        echo "=> Deleting unused volume: /var/lib/docker/vfs/dir/${ID}"
+        (( $(date +"%s") - $(date +"%s" -r /var/lib/docker/vfs/dir/${ID}) > ${UNUSED_VOLUME_TIME} )) && \
+        echo "=> Deleting unused volume: /var/lib/docker/vfs/dir/${ID}" && \
         rm -rf /var/lib/docker/vfs/dir/${ID}
     done < ToBeCleanedVolumeIdList
 
@@ -118,7 +124,8 @@ do
     comm -23 VolumeIdList KeepVolumeIdList > ToBeCleanedVolumeIdList
     while read ID
     do
-        echo "=> Deleting unused volume: /var/lib/docker/volumes/${ID}"
+        (( $(date +"%s") - $(date +"%s" -r /var/lib/docker/volumes/${ID}) > ${UNUSED_VOLUME_TIME} )) && \
+        echo "=> Deleting unused volume: /var/lib/docker/volumes/${ID}" && \
         rm -rf /var/lib/docker/volumes/${ID}
     done < ToBeCleanedVolumeIdList
     echo "=> Done!"

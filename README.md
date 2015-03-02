@@ -16,7 +16,8 @@ tutum/image-cleanup
 **Arguments**
 
 ```
-    CLEAN_PERIOD    how many seconds to run the clean script, 1800 by default.
-    DELAY_TIME      how many seconds delay to remove docker images, 1800 by default.
-    KEEP_IMAGES     A list of Images that will not be cleaned by this container, separated by ","
+    CLEAN_PERIOD        how many seconds to run the clean script, 1800 by default.
+    DELAY_TIME          how many seconds delay to remove docker images, 1800 by default.
+    UNUSED_VOLUME_TIME  how many seconde delay to remove docker volumes, 86400(24h) by default.
+    KEEP_IMAGES         A list of Images that will not be cleaned by this container, separated by ","
 ```

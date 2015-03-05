@@ -7,17 +7,18 @@ tutum/image-cleanup
       -v /var/run:/var/run:rw \
       -v /usr/lib/tutum/docker:/usr/bin/docker:r \
       -v /var/lib/docker:/var/lib/docker:rw \
-      -e CLEAN_PERIOD=1800 \
-      -e DELAY_TIME=1800 \
-      -e KEEP_IMAGES="ubuntu:trusty, ubuntu:latest" \
+      -e IMAGE_CLEAN_INTERVAL=1 \
+      -e IMAGE_CLEAN_DELAYED=1800 \
+      -e VOLUME_CLEAN_INTERVAL=1800 \
+      -e IMAGE_LOCKED="ubuntu:trusty, tutum/curl:trusty" \
       tutum/image-cleanup
 ```
 
 **Arguments**
 
 ```
-    CLEAN_PERIOD        how many seconds to run the clean script, 1800 by default.
-    DELAY_TIME          how many seconds delay to remove docker images, 1800 by default.
-    UNUSED_VOLUME_TIME  how many seconde delay to remove docker volumes, 86400(24h) by default.
-    KEEP_IMAGES         A list of Images that will not be cleaned by this container, separated by ","
+    IMAGE_CLEAN_INTERVAL	    how many seconds to clean the images, 1 by default.
+    IMAGE_CLEAN_DELAYED      how many seconds delay to clean docker images, 1800 by default.
+    VOLUME_CLEAN_INTERVAL    how many seconde to clean docker volumes, 1800 by default.
+    IMAGE_LOCKED             A list of Images that will not be cleaned by this container, separated by ","
 ```

@@ -8,10 +8,12 @@ fi
 if [ "${IMAGE_LOCKED}" == "**None**" ]; then
     exec /image-cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
         -imageCleanDelayed ${IMAGE_CLEAN_DELAYED} \
-        -volumeCleanInterval ${VOLUME_CLEAN_INTERVAL}
+        -volumeCleanInterval ${VOLUME_CLEAN_INTERVAL} \
+        -dockerRootDir ${DOCKER_ROOT_DIR}
 else
-	exec /image-cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
+    exec /image-cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
         -imageCleanDelayed ${IMAGE_CLEAN_DELAYED} \
         -volumeCleanInterval ${VOLUME_CLEAN_INTERVAL} \
-        -imageLocked "${IMAGE_LOCKED}"
+        -imageLocked "${IMAGE_LOCKED}" \
+        -dockerRootDir ${DOCKER_ROOT_DIR}
 fi

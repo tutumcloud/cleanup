@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ var (
 	pImageCleanDelayed   = flag.Int("imageCleanDelayed", 1800, "delayed time to clean the images")
 	pVolumeCleanInterval = flag.Int("volumeCleanInterval", 1800, "interval to run volume cleanup")
 	pImageLocked         = flag.String("imageLocked", "", "images to avoid being cleaned")
+	pDockerRootDir       = flag.String("dockerRootDir", "/var/lib/docker", "root path of docker lib")
 )
 
 func init() {
@@ -152,11 +154,12 @@ func cleanImages(client *docker.Client) {
 func cleanVolumes(client *docker.Client) {
 	log.Println("Vol Cleanup: starting volume cleanup ...")
 
-	// volumesMap[path] = weight
+	// volumesMap[volPath] = weight
 	// weight = 0 ~ 99, increace on every iteration if it is not used
 	// weight = 100, remove it
 	volumesMap := make(map[string]int)
-	volumeDir := "/var/lib/docker/vfs/dir/"
+	volumeDir1 := path.Join(*pDockerRootDir, "vfs/dir")
+	volumeDir2 := path.Join(*pDockerRootDir, "volumes")
 	for {
 		containers, err := client.ListContainers(docker.ListContainersOptions{All: true})
 		if err != nil {
@@ -172,8 +175,12 @@ func cleanVolumes(client *docker.Client) {
 					log.Println("Vol Cleanup: cannot get container inspect", err)
 					break
 				}
-				for _, path := range containerInspect.Volumes {
-					volumesMap[path] = 0
+				for _, volPath := range containerInspect.Volumes {
+					volumesMap[volPath] = 0
+					if strings.Contains(volPath, "docker/vfs/dir") {
+						volPath2 := strings.Replace(volPath, "vfs/dir", "volumes", 1)
+						volumesMap[volPath2] = 0
+					}
 				}
 			}
 			if inspect_error {
@@ -182,38 +189,38 @@ func cleanVolumes(client *docker.Client) {
 			}
 		}
 
-		files, err := ioutil.ReadDir("/var/lib/docker/vfs/dir/")
+		files, err := ioutil.ReadDir(volumeDir1)
 		if err != nil {
 			log.Printf("Vol Cleanup: %s", err)
 		} else {
 			for _, f := range files {
-				path := volumeDir + f.Name()
-				weight := volumesMap[path]
-				volumesMap[path] = weight + 1
+				volPath := path.Join(volumeDir1, f.Name())
+				weight := volumesMap[volPath]
+				volumesMap[volPath] = weight + 1
 			}
 		}
 
-		files, err = ioutil.ReadDir("/var/lib/docker/volumes/")
+		files, err = ioutil.ReadDir(volumeDir2)
 		if err != nil {
 			log.Printf("Vol Cleanup: %s", err)
 		} else {
 			for _, f := range files {
-				path := volumeDir + f.Name()
-				weight := volumesMap[path]
-				volumesMap[path] = weight + 1
+				volPath := path.Join(volumeDir2, f.Name())
+				weight := volumesMap[volPath]
+				volumesMap[volPath] = weight + 1
 			}
 		}
 
 		// Remove the unused volumes
 		counter := 0
-		for path, weight := range volumesMap {
+		for volPath, weight := range volumesMap {
 			if weight == 100 {
-				log.Printf("Vol Cleanup: removing volume %s", path)
-				err := os.RemoveAll(path)
+				log.Printf("Vol Cleanup: removing volume %s", volPath)
+				err := os.RemoveAll(volPath)
 				if err != nil {
 					log.Printf("Img Cleanup: %s", err)
 				}
-				delete(volumesMap, path)
+				delete(volumesMap, volPath)
 				counter += 1
 			}
 		}

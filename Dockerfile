@@ -16,6 +16,7 @@ RUN apt-get update -y && \
     apt-get autoremove -y git && \
     apt-get clean
 
+ENV DOCKER_ROOT_DIR "/var/lib/docker/"
 ENV IMAGE_CLEAN_INTERVAL 1
 ENV IMAGE_CLEAN_DELAYED 1800
 ENV VOLUME_CLEAN_INTERVAL 1800

@@ -218,7 +218,7 @@ func cleanVolumes(client *docker.Client) {
 				log.Printf("Vol Cleanup: removing volume %s", volPath)
 				err := os.RemoveAll(volPath)
 				if err != nil {
-					log.Printf("Img Cleanup: %s", err)
+					log.Printf("Vol Cleanup: %s", err)
 				}
 				delete(volumesMap, volPath)
 				counter += 1

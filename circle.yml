@@ -1,6 +1,14 @@
 machine:
   services:
     - docker
-test:
-  override:
-    - docker build -t sut .
+deployment:
+  staging:
+    branch: staging
+    commands:
+      - ./build.sh
+      - ./deploy.sh tutum/cleanup:staging
+  master:
+    branch: master
+    commands:
+      - ./build.sh
+      - ./deploy.sh tutum/cleanup:latest

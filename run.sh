@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ ! -e "/var/run/docker.sock" ]; then
     echo "=> Cannot find docker socket(/var/run/docker.sock), please check the command!"

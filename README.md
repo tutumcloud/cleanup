@@ -10,7 +10,7 @@ tutum/image-cleanup
       -e IMAGE_CLEAN_DELAYED=1800 \
       -e VOLUME_CLEAN_INTERVAL=1800 \
       -e IMAGE_LOCKED="ubuntu:trusty, tutum/curl:trusty" \
-      tutum/image-cleanup
+      tutum/cleanup
 
 **Arguments**
 

@@ -84,7 +84,7 @@ func cleanImages(client *docker.Client) {
 					log.Println("Img Cleanup: cannot get container inspect", err)
 					break
 				}
-				imageIdMap[containerInspect.Image] = false
+				delete(imageIdMap, containerInspect.Image)
 			}
 			if inspect_error {
 				time.Sleep(time.Duration(*pImageCleanInterval+*pImageCleanDelayed) * time.Second)
@@ -98,7 +98,7 @@ func cleanImages(client *docker.Client) {
 			for _, lockedImage := range lockedImages {
 				imageInspect, err := client.InspectImage(strings.Trim(lockedImage, " "))
 				if err == nil {
-					imageIdMap[imageInspect.ID] = false
+					delete(imageIdMap, imageInspect.ID)
 				}
 
 			}
@@ -123,7 +123,7 @@ func cleanImages(client *docker.Client) {
 					log.Println("Img Cleanup: cannot get container inspect", err)
 					break
 				}
-				imageIdMap[containerInspect.Image] = false
+				delete(imageIdMap, containerInspect.Image)
 			}
 			if inspect_error {
 				time.Sleep(time.Duration(*pImageCleanInterval) * time.Second)

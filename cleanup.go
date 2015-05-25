@@ -21,6 +21,7 @@ var (
 	pVolumeCleanInterval = flag.Int("volumeCleanInterval", 1800, "interval to run volume cleanup")
 	pImageLocked         = flag.String("imageLocked", "", "images to avoid being cleaned")
 	pDockerRootDir       = flag.String("dockerRootDir", "/var/lib/docker", "root path of docker lib")
+	wg                   sync.WaitGroup
 )
 
 func init() {
@@ -35,8 +36,7 @@ func main() {
 		log.Fatalf("Docker %s:%s", err, *pDockerHost)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	go cleanImages(client)
 	go cleanVolumes(client)
 	wg.Wait()
@@ -51,6 +51,8 @@ func getDockerClient(host string) (*docker.Client, error) {
 }
 
 func cleanImages(client *docker.Client) {
+	defer wg.Done()
+
 	log.Printf("Img Cleanup: the following images will be locked: %s", *pImageLocked)
 	log.Println("Img Cleanup: starting image cleanup ...")
 	for {
@@ -152,6 +154,8 @@ func cleanImages(client *docker.Client) {
 }
 
 func cleanVolumes(client *docker.Client) {
+	defer wg.Done()
+
 	log.Println("Vol Cleanup: starting volume cleanup ...")
 
 	// volumesMap[volPath] = weight

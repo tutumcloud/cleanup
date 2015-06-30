@@ -1,4 +1,4 @@
-package main //import "github.com/tutumcloud/image-cleanup"
+package main //import "github.com/tutumcloud/cleanup"
 
 import (
 	"flag"

@@ -6,12 +6,12 @@ if [ ! -e "/var/run/docker.sock" ]; then
 fi
 
 if [ "${IMAGE_LOCKED}" == "**None**" ]; then
-    exec /image-cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
+    exec /cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
         -imageCleanDelayed ${IMAGE_CLEAN_DELAYED} \
         -volumeCleanInterval ${VOLUME_CLEAN_INTERVAL} \
         -dockerRootDir ${DOCKER_ROOT_DIR}
 else
-    exec /image-cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
+    exec /cleanup -imageCleanInterval ${IMAGE_CLEAN_INTERVAL} \
         -imageCleanDelayed ${IMAGE_CLEAN_DELAYED} \
         -volumeCleanInterval ${VOLUME_CLEAN_INTERVAL} \
         -imageLocked "${IMAGE_LOCKED}" \

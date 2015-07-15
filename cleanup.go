@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -157,13 +158,13 @@ func cleanVolumes(client *docker.Client) {
 	defer wg.Done()
 
 	log.Println("Vol Cleanup: starting volume cleanup ...")
+	re := regexp.MustCompile(".*/([0-9a-fA-F]{64}).*")
 
-	// volumesMap[volPath] = weight
+	// volumesMap[id] = weight
 	// weight = 0 ~ 99, increace on every iteration if it is not used
 	// weight = 100, remove it
 	volumesMap := make(map[string]int)
-	volumeDir1 := path.Join(*pDockerRootDir, "vfs/dir")
-	volumeDir2 := path.Join(*pDockerRootDir, "volumes")
+	volumeDir := path.Join(*pDockerRootDir, "volumes")
 	for {
 		containers, err := client.ListContainers(docker.ListContainersOptions{All: true})
 		if err != nil {
@@ -180,10 +181,10 @@ func cleanVolumes(client *docker.Client) {
 					break
 				}
 				for _, volPath := range containerInspect.Volumes {
-					volumesMap[volPath] = 0
-					if strings.Contains(volPath, "docker/vfs/dir") {
-						volPath2 := strings.Replace(volPath, "vfs/dir", "volumes", 1)
-						volumesMap[volPath2] = 0
+					terms := re.FindStringSubmatch(volPath)
+					if len(terms) == 2 {
+						id := terms[1]
+						volumesMap[id] = 0
 					}
 				}
 			}
@@ -193,39 +194,30 @@ func cleanVolumes(client *docker.Client) {
 			}
 		}
 
-		files, err := ioutil.ReadDir(volumeDir1)
+		files, err := ioutil.ReadDir(volumeDir)
 		if err != nil {
 			log.Printf("Vol Cleanup: %s", err)
 		} else {
 			for _, f := range files {
-				volPath := path.Join(volumeDir1, f.Name())
-				weight := volumesMap[volPath]
-				volumesMap[volPath] = weight + 1
-			}
-		}
-
-		files, err = ioutil.ReadDir(volumeDir2)
-		if err != nil {
-			log.Printf("Vol Cleanup: %s", err)
-		} else {
-			for _, f := range files {
-				volPath := path.Join(volumeDir2, f.Name())
-				weight := volumesMap[volPath]
-				volumesMap[volPath] = weight + 1
+				id := f.Name()
+				weight := volumesMap[id]
+				volumesMap[id] = weight + 1
 			}
 		}
 
 		// Remove the unused volumes
 		counter := 0
-		for volPath, weight := range volumesMap {
-			if weight == 100 {
+		for id, weight := range volumesMap {
+			if weight >= 100 {
+				volPath := path.Join(volumeDir, id)
 				log.Printf("Vol Cleanup: removing volume %s", volPath)
 				err := os.RemoveAll(volPath)
 				if err != nil {
 					log.Printf("Vol Cleanup: %s", err)
+				} else {
+					delete(volumesMap, id)
+					counter += 1
 				}
-				delete(volumesMap, volPath)
-				counter += 1
 			}
 		}
 		log.Printf("Vol Cleanup: %d volumes have been removed", counter)

@@ -1,0 +1,13 @@
+cleanup:
+  image: tutum/cleanup
+  volumes:
+    - /var/run:/var/run:rw
+    - /var/lib/docker:/var/lib/docker:rw
+  privileged: true
+  environment:
+    IMAGE_CLEAN_INTERVAL: 1
+    IMAGE_CLEAN_DELAYED: 259200
+    VOLUME_CLEAN_INTERVAL: 1800
+    IMAGE_LOCKED: "weaveworks/weaveexec:0.10.0,tutum/builder:latest"
+    DOCKER_ROOT_DIR: /var/lib/docker
+    LOGSPOUT: ignore

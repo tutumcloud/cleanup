@@ -1,6 +1,8 @@
 tutum/cleanup
 =============
 
+[![Deploy to Tutum](https://s.tutum.co/deploy-to-tutum.svg)](https://dashboard.tutum.co/stack/deploy/)
+
 System container used by [Tutum](http://www.tutum.co/) to remove unused images and volumes. System containers are launched, configured and managed automatically by Tutum.
 
 ## Usage

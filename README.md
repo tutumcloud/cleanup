@@ -9,7 +9,7 @@ System container used by [Tutum](http://www.tutum.co/) to remove unused images a
 
     docker run -d \
       --privileged \
-      -v /var/run:/var/run:rw \
+      -v /var/run/docker.sock:/var/run/docker.sock:rw \
       -v /var/lib/docker:/var/lib/docker:rw \
       [-e IMAGE_CLEAN_INTERVAL=1] \
       [-e IMAGE_CLEAN_DELAYED=1800] \

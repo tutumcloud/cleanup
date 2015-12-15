@@ -7,7 +7,7 @@ System container used by [Tutum](http://www.tutum.co/) to remove unused images a
 
 ## Usage
 
-docker 1.5 ~ 1.8
+Docker < 1.9
 
     docker run -d \
       --privileged \
@@ -19,7 +19,7 @@ docker 1.5 ~ 1.8
       [-e IMAGE_LOCKED="ubuntu:trusty, tutum/curl:trusty"] \
       tutum/cleanup
 
-From docker 1.9:
+Docker >= 1.9
 
     docker run -d \
       -v /var/run/docker.sock:/var/run/docker.sock:rw \
@@ -39,6 +39,7 @@ IMAGE_CLEAN_DELAYED | (optional) How long to wait to consider an image unused (i
 VOLUME_CLEAN_INTERVAL | (optional) How long to wait to consider a volume unused (in seconds), 1800 by default.
 IMAGE_LOCKED | (optional) A list of images that will not be cleaned by this container, separated by `,`
 
+
 ## Notice:
 
-docker supports `-v` option in `docker rm` command to allow user to remove the volume when removing the container from version 1.9. As a result, this image only cleans unnecessary image when the docker version >= 1.9.0.
+From docker 1.9 onwards, volumes are a top level entity and can be removed using `docker volume rm <name>`. This image will not cleanup volumes when connected to a docker engine 1.9+ to avoid potential data loss.

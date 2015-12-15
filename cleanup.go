@@ -44,7 +44,7 @@ func main() {
 		apiVersion = version.Get("ApiVersion")
 		log.Print("Api version: ", apiVersion)
 	} else {
-		log.Fatalf("Faid to get docker version: %s", err)
+		log.Fatalf("Faild to get docker version: %s", err)
 	}
 
 	wg.Add(1)
@@ -59,7 +59,7 @@ func main() {
 	case "1.20": // docker 1.8.x
 		go cleanVolumesDocker120(client, apiVersion)
 	default:
-		log.Fatal("Unsupport docker Api version: ", apiVersion)
+		log.Print("No need to perform volume cleanup since docker 1.9.0")
 	}
 	wg.Wait()
 }

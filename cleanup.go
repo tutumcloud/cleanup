@@ -44,7 +44,7 @@ func main() {
 		apiVersion = version.Get("ApiVersion")
 		log.Print("Api version: ", apiVersion)
 	} else {
-		log.Fatalf("Faild to get docker version: %s", err)
+		log.Fatalf("Failed to get docker version: %s", err)
 	}
 
 	wg.Add(1)

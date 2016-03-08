@@ -2,27 +2,19 @@ package main //import "github.com/tutumcloud/cleanup"
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
-	"os"
-	"path"
-	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	docker "github.com/fsouza/go-dockerclient"
 )
 
 var (
-	pDockerHost          = flag.String("dockerHost", "unix:///var/run/docker.sock", "docker host")
-	pImageCleanInterval  = flag.Int("imageCleanInterval", 1, "interval to run image cleanup")
-	pImageCleanDelayed   = flag.Int("imageCleanDelayed", 1800, "delayed time to clean the images")
-	pVolumeCleanInterval = flag.Int("volumeCleanInterval", 1800, "interval to run volume cleanup")
-	pImageLocked         = flag.String("imageLocked", "", "images to avoid being cleaned")
-	pDockerRootDir       = flag.String("dockerRootDir", "/var/lib/docker", "root path of docker lib")
-	wg                   sync.WaitGroup
+	pDockerHost         = flag.String("dockerHost", "unix:///var/run/docker.sock", "docker host")
+	pImageCleanInterval = flag.Int("imageCleanInterval", 1, "interval to run image cleanup")
+	pImageCleanDelayed  = flag.Int("imageCleanDelayed", 1800, "delayed time to clean the images")
+	pImageLocked        = flag.String("imageLocked", "", "images to avoid being cleaned")
 )
 
 func init() {
@@ -32,36 +24,12 @@ func init() {
 func main() {
 	flag.Parse()
 
-	var apiVersion string
 	client, err := getDockerClient(*pDockerHost)
 	if err != nil {
 		log.Fatalf("Docker %s:%s", err, *pDockerHost)
 	}
 
-	version, err := client.Version()
-	if err == nil {
-		log.Print("Docker version: ", version.Get("Version"))
-		apiVersion = version.Get("ApiVersion")
-		log.Print("Api version: ", apiVersion)
-	} else {
-		log.Fatalf("Failed to get docker version: %s", err)
-	}
-
-	wg.Add(1)
-	go cleanImages(client)
-	switch apiVersion {
-	case "1.17": // docker 1.5.x
-		fallthrough
-	case "1.18": // docker 1.6.x
-		go cleanVolumesDocker118(client, apiVersion)
-	case "1.19": // docker 1.7.x
-		go cleanVolumesDocker119(client, apiVersion)
-	case "1.20": // docker 1.8.x
-		go cleanVolumesDocker120(client, apiVersion)
-	default:
-		log.Print("No need to perform volume cleanup since docker 1.9.0")
-	}
-	wg.Wait()
+	cleanImages(client)
 }
 
 func getDockerClient(host string) (*docker.Client, error) {
@@ -73,8 +41,6 @@ func getDockerClient(host string) (*docker.Client, error) {
 }
 
 func cleanImages(client *docker.Client) {
-	defer wg.Done()
-
 	log.Printf("Img Cleanup: the following images will be locked: %s", *pImageLocked)
 	log.Println("Img Cleanup: starting image cleanup ...")
 	for {
@@ -172,236 +138,5 @@ func cleanImages(client *docker.Client) {
 		// Sleep again
 		log.Printf("Img Cleanup: next cleanup will be start in %d seconds", *pImageCleanInterval)
 		time.Sleep(time.Duration(*pImageCleanInterval) * time.Second)
-	}
-}
-
-func cleanVolumesDocker120(client *docker.Client, apiVersion string) {
-	defer wg.Done()
-
-	log.Printf("Vol Cleanup: starting volume cleanup(ver %s) ...", apiVersion)
-	re := regexp.MustCompile(".*/([0-9a-fA-F]{64}).*")
-
-	// volumesMap[id] = weight
-	// weight = 0 ~ 99, increace on every iteration if it is not used
-	// weight = 100, remove it
-	volumesMap := make(map[string]int)
-	volumeDir := path.Join(*pDockerRootDir, "volumes")
-	for {
-		containers, err := client.ListContainers(docker.ListContainersOptions{All: true})
-		if err != nil {
-			log.Println("Vol Cleanup: cannot get container list", err)
-			time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-			continue
-		} else {
-			inspect_error := false
-			for _, container := range containers {
-				containerInspect, err := client.InspectContainer(container.ID)
-				if err != nil {
-					inspect_error = true
-					log.Println("Vol Cleanup: cannot get container inspect", err)
-					break
-				}
-				for _, mount := range containerInspect.Mounts {
-					terms := re.FindStringSubmatch(mount.Source)
-					if len(terms) == 2 {
-						id := terms[1]
-						volumesMap[id] = 0
-					}
-				}
-			}
-			if inspect_error {
-				time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-				continue
-			}
-		}
-
-		files, err := ioutil.ReadDir(volumeDir)
-		if err != nil {
-			log.Printf("Vol Cleanup: %s", err)
-		} else {
-			for _, f := range files {
-				id := f.Name()
-				weight := volumesMap[id]
-				volumesMap[id] = weight + 1
-			}
-		}
-
-		// Remove the unused volumes
-		counter := 0
-		for id, weight := range volumesMap {
-			if weight >= 100 {
-				volPath := path.Join(volumeDir, id)
-				log.Printf("Vol Cleanup: removing volume %s", volPath)
-				err := os.RemoveAll(volPath)
-				if err != nil {
-					log.Printf("Vol Cleanup: %s", err)
-				} else {
-					delete(volumesMap, id)
-					counter += 1
-				}
-			}
-		}
-		log.Printf("Vol Cleanup: %d volumes have been removed", counter)
-
-		// Sleep
-		log.Printf("Vol Cleanup: next cleanup will be start in %d seconds", *pVolumeCleanInterval)
-		time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-	}
-}
-
-func cleanVolumesDocker119(client *docker.Client, apiVersion string) {
-	defer wg.Done()
-
-	log.Printf("Vol Cleanup: starting volume cleanup(ver %s) ...", apiVersion)
-	re := regexp.MustCompile(".*/([0-9a-fA-F]{64}).*")
-
-	// volumesMap[id] = weight
-	// weight = 0 ~ 99, increace on every iteration if it is not used
-	// weight = 100, remove it
-	volumesMap := make(map[string]int)
-	volumeDir := path.Join(*pDockerRootDir, "volumes")
-	for {
-		containers, err := client.ListContainers(docker.ListContainersOptions{All: true})
-		if err != nil {
-			log.Println("Vol Cleanup: cannot get container list", err)
-			time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-			continue
-		} else {
-			inspect_error := false
-			for _, container := range containers {
-				containerInspect, err := client.InspectContainer(container.ID)
-				if err != nil {
-					inspect_error = true
-					log.Println("Vol Cleanup: cannot get container inspect", err)
-					break
-				}
-				for _, volPath := range containerInspect.Volumes {
-					terms := re.FindStringSubmatch(volPath)
-					if len(terms) == 2 {
-						id := terms[1]
-						volumesMap[id] = 0
-					}
-				}
-			}
-			if inspect_error {
-				time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-				continue
-			}
-		}
-
-		files, err := ioutil.ReadDir(volumeDir)
-		if err != nil {
-			log.Printf("Vol Cleanup: %s", err)
-		} else {
-			for _, f := range files {
-				id := f.Name()
-				weight := volumesMap[id]
-				volumesMap[id] = weight + 1
-			}
-		}
-
-		// Remove the unused volumes
-		counter := 0
-		for id, weight := range volumesMap {
-			if weight >= 100 {
-				volPath := path.Join(volumeDir, id)
-				log.Printf("Vol Cleanup: removing volume %s", volPath)
-				err := os.RemoveAll(volPath)
-				if err != nil {
-					log.Printf("Vol Cleanup: %s", err)
-				} else {
-					delete(volumesMap, id)
-					counter += 1
-				}
-			}
-		}
-		log.Printf("Vol Cleanup: %d volumes have been removed", counter)
-
-		// Sleep
-		log.Printf("Vol Cleanup: next cleanup will be start in %d seconds", *pVolumeCleanInterval)
-		time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-	}
-}
-
-func cleanVolumesDocker118(client *docker.Client, apiVersion string) {
-	defer wg.Done()
-
-	log.Printf("Vol Cleanup: starting volume cleanup(ver %s) ...", apiVersion)
-
-	// volumesMap[volPath] = weight
-	// weight = 0 ~ 99, increace on every iteration if it is not used
-	// weight = 100, remove it
-	volumesMap := make(map[string]int)
-	volumeDir1 := path.Join(*pDockerRootDir, "vfs/dir")
-	volumeDir2 := path.Join(*pDockerRootDir, "volumes")
-	for {
-		containers, err := client.ListContainers(docker.ListContainersOptions{All: true})
-		if err != nil {
-			log.Println("Vol Cleanup: cannot get container list", err)
-			time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-			continue
-		} else {
-			inspect_error := false
-			for _, container := range containers {
-				containerInspect, err := client.InspectContainer(container.ID)
-				if err != nil {
-					inspect_error = true
-					log.Println("Vol Cleanup: cannot get container inspect", err)
-					break
-				}
-				for _, volPath := range containerInspect.Volumes {
-					volumesMap[volPath] = 0
-					if strings.Contains(volPath, "docker/vfs/dir") {
-						volPath2 := strings.Replace(volPath, "vfs/dir", "volumes", 1)
-						volumesMap[volPath2] = 0
-					}
-				}
-			}
-			if inspect_error {
-				time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
-				continue
-			}
-		}
-
-		files, err := ioutil.ReadDir(volumeDir1)
-		if err != nil {
-			log.Printf("Vol Cleanup: %s", err)
-		} else {
-			for _, f := range files {
-				volPath := path.Join(volumeDir1, f.Name())
-				weight := volumesMap[volPath]
-				volumesMap[volPath] = weight + 1
-			}
-		}
-
-		files, err = ioutil.ReadDir(volumeDir2)
-		if err != nil {
-			log.Printf("Vol Cleanup: %s", err)
-		} else {
-			for _, f := range files {
-				volPath := path.Join(volumeDir2, f.Name())
-				weight := volumesMap[volPath]
-				volumesMap[volPath] = weight + 1
-			}
-		}
-
-		// Remove the unused volumes
-		counter := 0
-		for volPath, weight := range volumesMap {
-			if weight == 100 {
-				log.Printf("Vol Cleanup: removing volume %s", volPath)
-				err := os.RemoveAll(volPath)
-				if err != nil {
-					log.Printf("Vol Cleanup: %s", err)
-				}
-				delete(volumesMap, volPath)
-				counter += 1
-			}
-		}
-		log.Printf("Vol Cleanup: %d volumes have been removed", counter)
-
-		// Sleep
-		log.Printf("Vol Cleanup: next cleanup will be start in %d seconds", *pVolumeCleanInterval)
-		time.Sleep(time.Duration(*pVolumeCleanInterval) * time.Second)
 	}
 }

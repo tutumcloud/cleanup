@@ -1,5 +1,0 @@
-#!/bin/bash
-echo "=> Building the binary"
-docker run --privileged \
-  -v $(pwd):/src \
-  centurylink/golang-builder \

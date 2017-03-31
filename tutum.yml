@@ -1,9 +1,0 @@
-cleanup:
-  image: tutum/cleanup
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  privileged: true
-  environment:
-    IMAGE_CLEAN_INTERVAL: 1
-    IMAGE_CLEAN_DELAYED: 259200
-    IMAGE_LOCKED: "weaveworks/weaveexec:0.10.0,tutum/builder:latest"
